@@ -1,44 +1,36 @@
+
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import dns from "node:dns";
-import { MongoClient, ObjectId } from "mongodb";
+import { ObjectId } from "mongodb";
+import { toNodeHandler } from "better-auth/node";
 
-dotenv.config();
-
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+import { auth } from "./auth.js";
+import { db } from "./db.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// MongoDB collections
+const studiosCollection = db.collection("studios");
+const bookingsCollection = db.collection("bookings");
+
+// CORS configuration
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Better Auth handler
+// IMPORTANT: Keep this before express.json()
+app.all("/api/auth/*splat", toNodeHandler(auth));
+
+// Parse JSON for the remaining Express routes
 app.use(express.json());
-
-const client = new MongoClient(process.env.MONGO_URI);
-
-let db;
-let studiosCollection;
-let usersCollection;
-let bookingsCollection;
-
-async function connectToMongoDB() {
-  try {
-    await client.connect();
-    await client.db("admin").command({ ping: 1 });
-
-    // Keep your existing database name
-    db = client.db("stdiospace");
-
-    studiosCollection = db.collection("studios");
-    usersCollection = db.collection("users");
-    bookingsCollection = db.collection("bookings");
-
-    console.log("MongoDB Connected Successfully");
-  } catch (error) {
-    console.error("MongoDB connection error:", error);
-    process.exit(1);
-  }
-}
 
 // Root route
 app.get("/", (req, res) => {
@@ -47,7 +39,9 @@ app.get("/", (req, res) => {
 
 // Test route
 app.get("/test", (req, res) => {
-  res.json({ message: "API working successfully" });
+  res.json({
+    message: "API working successfully",
+  });
 });
 
 // Get all public studios
@@ -248,7 +242,6 @@ app.post("/bookings", async (req, res) => {
         studio.location ||
         "",
 
-      // Studio owner information
       hostEmail,
 
       bookingDate: parsedDate,
@@ -455,31 +448,7 @@ app.patch("/bookings/:id/cancel", async (req, res) => {
   }
 });
 
-// Register user
-app.post("/register", async (req, res) => {
-  try {
-    const user = req.body;
-
-    const result = await usersCollection.insertOne({
-      ...user,
-      createdAt: new Date(),
-    });
-
-    res.status(201).json({
-      message: "User registered successfully",
-      insertedId: result.insertedId,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Registration failed",
-      error: error.message,
-    });
-  }
-});
-
 // Start server
-connectToMongoDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
