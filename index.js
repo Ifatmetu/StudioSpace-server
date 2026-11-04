@@ -226,9 +226,6 @@ async function requireAuth(req, res, next) {
   }
 }
 
-// ======================================
-// PUBLIC ROUTES
-// ======================================
 
 app.get("/", (req, res) => {
   res.send("StudioSpace API is running");
@@ -298,11 +295,6 @@ app.get("/studios/featured", async (req, res) => {
     });
   }
 });
-
-// ======================================
-// PROTECTED STUDIO ROUTES
-// (static routes must stay above /studios/:id)
-// ======================================
 
 // Logged-in user's own studios (My Listings)
 app.get("/studios", requireAuth, async (req, res) => {
@@ -472,10 +464,6 @@ app.delete("/studios/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ======================================
-// REVIEWS
-// ======================================
-
 app.get("/studios/:id/reviews", async (req, res) => {
   try {
     if (!toObjectId(req.params.id)) {
@@ -550,9 +538,7 @@ app.post("/studios/:id/reviews", requireAuth, async (req, res) => {
   }
 });
 
-// ======================================
-// BOOKINGS
-// ======================================
+
 
 // Create booking request  (status: Pending)
 // body: { studioId, bookingDate: "YYYY-MM-DD", startTime: "HH:mm", endTime: "HH:mm" }
@@ -870,9 +856,6 @@ app.patch("/bookings/:id/cancel", requireAuth, async (req, res) => {
   }
 });
 
-// ======================================
-// WISHLIST (optional feature)
-// ======================================
 
 app.get("/wishlist", requireAuth, async (req, res) => {
   try {
@@ -937,9 +920,6 @@ app.delete("/wishlist/:studioId", requireAuth, async (req, res) => {
   }
 });
 
-// ======================================
-// 404 + ERROR HANDLERS
-// ======================================
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
@@ -957,3 +937,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+export default app;
