@@ -28,17 +28,43 @@ const JWKS = createRemoteJWKSet(new URL(`${AUTH_URL}/api/auth/jwks`));
 // MIDDLEWARE
 // ======================================
 
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.CLIENT_URL?.replace(/\/+$/, ""),
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const isAllowed =
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:");
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Cookie",
+      "x-better-auth-client",
+      "x-requested-with",
+    ],
   })
 );
 
 // Better Auth handler must be before express.json()
-app.all("/api/auth/*splat", toNodeHandler(auth));
+app.all(["/api/auth", "/api/auth/*splat", "/api/auth/*"], toNodeHandler(auth));
 
 app.use(express.json());
 

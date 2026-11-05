@@ -10,15 +10,24 @@ if (!process.env.BETTER_AUTH_SECRET) {
 
 const isProd = process.env.NODE_ENV === "production";
 
+const cleanClientUrl = process.env.CLIENT_URL?.replace(/\/+$/, "");
+
 export const auth = betterAuth({
   database: mongodbAdapter(db, {
     client: mongoClient,
   }),
 
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: process.env.BETTER_AUTH_URL?.replace(/\/+$/, ""),
   secret: process.env.BETTER_AUTH_SECRET,
 
-  trustedOrigins: [process.env.CLIENT_URL].filter(Boolean),
+  trustedOrigins: [
+    cleanClientUrl,
+    process.env.CLIENT_URL,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "https://*.vercel.app",
+  ].filter(Boolean),
 
   emailAndPassword: {
     enabled: true,
@@ -34,9 +43,8 @@ export const auth = betterAuth({
     },
   },
 
-  // Challenge 1: session cookie is always HTTPOnly.
-  // In production (client and server on different domains) it needs SameSite=None + Secure.
   advanced: {
+    useSecureCookies: isProd,
     defaultCookieAttributes: {
       httpOnly: true,
       secure: isProd,
