@@ -29,7 +29,6 @@ const JWKS = createRemoteJWKSet(new URL(`${AUTH_URL}/api/auth/jwks`));
 // ======================================
 
 const allowedOrigins = [
-  process.env.CLIENT_URL,
   process.env.CLIENT_URL?.replace(/\/+$/, ""),
   "http://localhost:3000",
   "http://localhost:3001",
@@ -39,17 +38,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        origin.endsWith(".vercel.app") ||
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:");
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(null, true);
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -64,7 +57,7 @@ app.use(
 );
 
 // Better Auth handler must be before express.json()
-app.all(["/api/auth", "/api/auth/*splat", "/api/auth/*"], toNodeHandler(auth));
+app.all(["/api/auth", "/api/auth/*splat"], toNodeHandler(auth));
 
 app.use(express.json());
 
@@ -187,13 +180,7 @@ async function refreshStudioRating(studioId) {
   );
 }
 
-// ======================================
-// AUTHENTICATION (Challenge 1)
-// Accepts either:
-//   1) Authorization: Bearer <JWT>  (verified with Better Auth JWKS)
-//   2) HTTPOnly session cookie       (verified by Better Auth)
-// Anything else -> 401 Unauthorized
-// ======================================
+
 
 async function requireAuth(req, res, next) {
   try {
